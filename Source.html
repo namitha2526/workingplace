@@ -1090,7 +1090,75 @@
                 showNotification('Please enter symptoms first');
                 return;
             }
-            
+            //extra
+            <script>
+// Multilingual AI result templates
+const aiResultTemplates = {
+    en: {
+        empty: "Enter symptoms to get AI analysis",
+        fever: "Possible causes: viral infection, flu, or heat exhaustion.",
+        headache: "Common causes: stress, dehydration, or migraine.",
+        cough: "Could be due to cold, allergies, or infection.",
+        stomach_pain: "Causes may include indigestion, infection, or appendicitis.",
+        default: "Your symptoms may need more information. Please consult a doctor."
+    },
+    hi: {
+        empty: "AI विश्लेषण प्राप्त करने के लिए लक्षण दर्ज करें",
+        fever: "संभावित कारण: वायरल संक्रमण, फ्लू या लू लगना।",
+        headache: "आम कारण: तनाव, निर्जलीकरण या माइग्रेन।",
+        cough: "यह सर्दी, एलर्जी या संक्रमण के कारण हो सकता है।",
+        stomach_pain: "कारणों में अपच, संक्रमण या अपेंडिसाइटिस शामिल हो सकते हैं।",
+        default: "आपके लक्षणों के लिए अधिक जानकारी की आवश्यकता है। कृपया डॉक्टर से परामर्श करें।"
+    },
+    pa: {
+        empty: "AI ਵਿਸ਼ਲੇਸ਼ਣ ਲਈ ਲੱਛਣ ਦਾਖਲ ਕਰੋ",
+        fever: "ਸੰਭਾਵਿਤ ਕਾਰਨ: ਵਾਇਰਲ ਇੰਫੈਕਸ਼ਨ, ਫਲੂ ਜਾਂ ਗਰਮੀ ਲੱਗਣਾ।",
+        headache: "ਆਮ ਕਾਰਨ: ਤਣਾਅ, ਪਾਣੀ ਦੀ ਘਾਟ ਜਾਂ ਮਾਈਗ੍ਰੇਨ।",
+        cough: "ਇਹ ਜ਼ੁਕਾਮ, ਐਲਰਜੀ ਜਾਂ ਇੰਫੈਕਸ਼ਨ ਕਾਰਨ ਹੋ ਸਕਦਾ ਹੈ।",
+        stomach_pain: "ਕਾਰਨਾਂ ਵਿੱਚ ਅਜਮੋ, ਇੰਫੈਕਸ਼ਨ ਜਾਂ ਅਪੀਡਿਸਾਈਟਿਸ ਸ਼ਾਮਲ ਹੋ ਸਕਦੇ ਹਨ।",
+        default: "ਤੁਹਾਡੇ ਲੱਛਣਾਂ ਲਈ ਹੋਰ ਜਾਣਕਾਰੀ ਦੀ ਲੋੜ ਹੈ। ਕਿਰਪਾ ਕਰਕੇ ਡਾਕਟਰ ਨਾਲ ਸੰਪਰਕ ਕਰੋ।"
+    }
+};
+
+// Listen for textarea input to trigger analysis automatically
+document.addEventListener('DOMContentLoaded', function() {
+    const symptomInput = document.getElementById('symptoms-input');
+    if (symptomInput) {
+        symptomInput.addEventListener('input', analyzeSymptoms);
+    }
+    // Also re-run analysis when language is changed
+    const langSelector = document.getElementById('language-selector');
+    if (langSelector) {
+        langSelector.addEventListener('change', analyzeSymptoms);
+    }
+});
+
+function analyzeSymptoms() {
+    const input = document.getElementById('symptoms-input').value.toLowerCase();
+    const lang = window.currentLanguage || (document.getElementById('language-selector')?.value || 'en');
+    let result = aiResultTemplates[lang].default;
+
+    if (!input.trim()) {
+        result = aiResultTemplates[lang].empty;
+    } else if (input.includes('fever') || input.includes('बुखार') || input.includes('ਬੁਖਾਰ')) {
+        result = aiResultTemplates[lang].fever;
+    } else if (input.includes('headache') || input.includes('सिरदर्द') || input.includes('ਸਿਰ ਦਰਦ')) {
+        result = aiResultTemplates[lang].headache;
+    } else if (input.includes('cough') || input.includes('खांसी') || input.includes('ਖੰਘ')) {
+        result = aiResultTemplates[lang].cough;
+    } else if (input.includes('stomach') || input.includes('पेट') || input.includes('ਪੇਟ')) {
+        result = aiResultTemplates[lang].stomach_pain;
+    }
+    // ...expand with more symptoms as needed
+
+    document.getElementById('ai-results').innerHTML = `
+        <div class="text-gray-700">
+            <i class="fas fa-robot text-2xl mb-2"></i>
+            <p>${result}</p>
+        </div>
+    `;
+}
+</script>//extra
             // Mock AI analysis
             resultsDiv.innerHTML = `
                 <div class="space-y-3">
