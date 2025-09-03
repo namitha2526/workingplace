@@ -1,0 +1,1301 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nabha Rural Telemedicine Platform - Healthcare for 173 Villages</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        .pwa-install-banner { display: none; }
+        .video-container { aspect-ratio: 16/9; background: #1f2937; }
+        .offline-indicator { position: fixed; top: 0; right: 0; z-index: 1000; }
+        .language-text { transition: opacity 0.3s ease; }
+        .hidden-lang { opacity: 0; position: absolute; }
+        .chart-container { height: 300px; }
+        .notification-toast { 
+            position: fixed; 
+            top: 20px; 
+            right: 20px; 
+            z-index: 1001;
+            transform: translateX(400px);
+            transition: transform 0.3s ease;
+        }
+        .notification-toast.show { transform: translateX(0); }
+    </style>
+</head>
+<body class="bg-gray-50 font-sans">
+    <!-- PWA Install Banner -->
+    <div id="pwa-banner" class="pwa-install-banner bg-blue-600 text-white p-3 text-center">
+        <span class="language-text" data-lang="en">Install this app for offline access</span>
+        <span class="language-text hidden-lang" data-lang="hi">ऑफ़लाइन एक्सेस के लिए यह ऐप इंस्टॉल करें</span>
+        <span class="language-text hidden-lang" data-lang="pa">ਔਫਲਾਈਨ ਪਹੁੰਚ ਲਈ ਇਹ ਐਪ ਇੰਸਟਾਲ ਕਰੋ</span>
+        <button onclick="installPWA()" class="ml-4 bg-white text-blue-600 px-3 py-1 rounded">Install</button>
+        <button onclick="closePWABanner()" class="ml-2 text-white">✕</button>
+    </div>
+
+    <!-- Offline Indicator -->
+    <div id="offline-indicator" class="offline-indicator bg-red-500 text-white px-3 py-1 rounded-bl-lg hidden">
+        <i class="fas fa-wifi-slash mr-1"></i>
+        <span class="language-text" data-lang="en">Offline Mode</span>
+        <span class="language-text hidden-lang" data-lang="hi">ऑफ़लाइन मोड</span>
+        <span class="language-text hidden-lang" data-lang="pa">ਔਫਲਾਈਨ ਮੋਡ</span>
+    </div>
+
+    <!-- Notification Toast -->
+    <div id="notification-toast" class="notification-toast bg-green-500 text-white p-4 rounded-lg shadow-lg max-w-sm">
+        <div class="flex items-center">
+            <i class="fas fa-check-circle mr-2"></i>
+            <span id="notification-text">Notification message</span>
+        </div>
+    </div>
+
+    <!-- Header -->
+    <header class="bg-blue-600 text-white shadow-lg">
+        <div class="container mx-auto px-4 py-4">
+            <div class="flex flex-wrap justify-between items-center">
+                <div class="flex items-center mb-2 lg:mb-0">
+                    <i class="fas fa-heartbeat text-2xl mr-3"></i>
+                    <div>
+                        <h1 class="text-xl font-bold">
+                            <span class="language-text" data-lang="en">Nabha Rural Telemedicine</span>
+                            <span class="language-text hidden-lang" data-lang="hi">नाभा ग्रामीण टेलीमेडिसिन</span>
+                            <span class="language-text hidden-lang" data-lang="pa">ਨਾਭਾ ਪੇਂਡੂ ਟੈਲੀਮੈਡੀਸਿਨ</span>
+                        </h1>
+                        <p class="text-sm opacity-90">
+                            <span class="language-text" data-lang="en">Serving 173 villages in Punjab</span>
+                            <span class="language-text hidden-lang" data-lang="hi">पंजाब के 173 गाँवों की सेवा</span>
+                            <span class="language-text hidden-lang" data-lang="pa">ਪੰਜਾਬ ਦੇ 173 ਪਿੰਡਾਂ ਦੀ ਸੇਵਾ</span>
+                        </p>
+                    </div>
+                </div>
+                <div class="flex flex-wrap items-center space-x-4">
+                    <!-- Language Selector -->
+                    <select id="language-selector" class="bg-blue-700 text-white px-3 py-1 rounded" onchange="changeLanguage()">
+                        <option value="en">English</option>
+                        <option value="hi">हिंदी</option>
+                        <option value="pa">ਪੰਜਾਬੀ</option>
+                    </select>
+                    <!-- Role Selector -->
+                    <select id="role-selector" class="bg-blue-700 text-white px-3 py-1 rounded" onchange="changeRole()">
+                        <option value="patient">Patient</option>
+                        <option value="doctor">Doctor</option>
+                        <option value="pharmacist">Pharmacist</option>
+                        <option value="admin">Admin</option>
+                    </select>
+                    <!-- User Info -->
+                    <div class="flex items-center">
+                        <i class="fas fa-user-circle text-2xl mr-2"></i>
+                        <span id="user-name">Dr. Rajesh Kumar</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="container mx-auto px-4 py-6">
+        
+        <!-- Dashboard Overview -->
+        <section class="mb-8">
+            <h2 class="text-2xl font-bold mb-4 text-gray-800">
+                <span class="language-text" data-lang="en">Dashboard Overview</span>
+                <span class="language-text hidden-lang" data-lang="hi">डैशबोर्ड अवलोकन</span>
+                <span class="language-text hidden-lang" data-lang="pa">ਡੈਸ਼ਬੋਰਡ ਝਲਕ</span>
+            </h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
+                <div class="bg-white p-6 rounded-lg shadow-md">
+                    <div class="flex items-center">
+                        <i class="fas fa-video text-blue-500 text-2xl mr-3"></i>
+                        <div>
+                            <p class="text-gray-600 text-sm">
+                                <span class="language-text" data-lang="en">Active Consultations</span>
+                                <span class="language-text hidden-lang" data-lang="hi">सक्रिय परामर्श</span>
+                                <span class="language-text hidden-lang" data-lang="pa">ਸਰਗਰਮ ਸਲਾਹ</span>
+                            </p>
+                            <p class="text-2xl font-bold text-gray-800">24</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="bg-white p-6 rounded-lg shadow-md">
+                    <div class="flex items-center">
+                        <i class="fas fa-users text-green-500 text-2xl mr-3"></i>
+                        <div>
+                            <p class="text-gray-600 text-sm">
+                                <span class="language-text" data-lang="en">Registered Patients</span>
+                                <span class="language-text hidden-lang" data-lang="hi">पंजीकृत रोगी</span>
+                                <span class="language-text hidden-lang" data-lang="pa">ਰਜਿਸਟਰਡ ਮਰੀਜ਼</span>
+                            </p>
+                            <p class="text-2xl font-bold text-gray-800">8,432</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="bg-white p-6 rounded-lg shadow-md">
+                    <div class="flex items-center">
+                        <i class="fas fa-pills text-purple-500 text-2xl mr-3"></i>
+                        <div>
+                            <p class="text-gray-600 text-sm">
+                                <span class="language-text" data-lang="en">Medicines Available</span>
+                                <span class="language-text hidden-lang" data-lang="hi">उपलब्ध दवाएं</span>
+                                <span class="language-text hidden-lang" data-lang="pa">ਉਪਲਬਧ ਦਵਾਈਆਂ</span>
+                            </p>
+                            <p class="text-2xl font-bold text-gray-800">156</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="bg-white p-6 rounded-lg shadow-md">
+                    <div class="flex items-center">
+                        <i class="fas fa-calendar-check text-orange-500 text-2xl mr-3"></i>
+                        <div>
+                            <p class="text-gray-600 text-sm">
+                                <span class="language-text" data-lang="en">Today's Appointments</span>
+                                <span class="language-text hidden-lang" data-lang="hi">आज की नियुक्तियां</span>
+                                <span class="language-text hidden-lang" data-lang="pa">ਅੱਜ ਦੀਆਂ ਮੁਲਾਕਾਤਾਂ</span>
+                            </p>
+                            <p class="text-2xl font-bold text-gray-800">12</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Video Consultation Interface -->
+        <section class="mb-8">
+            <h2 class="text-2xl font-bold mb-4 text-gray-800">
+                <span class="language-text" data-lang="en">Video Consultation</span>
+                <span class="language-text hidden-lang" data-lang="hi">वीडियो परामर्श</span>
+                <span class="language-text hidden-lang" data-lang="pa">ਵੀਡੀਓ ਸਲਾਹ</span>
+            </h2>
+            <div class="bg-white rounded-lg shadow-md p-6">
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <div class="lg:col-span-2">
+                        <div class="video-container rounded-lg mb-4 flex items-center justify-center">
+                            <div class="text-center text-white">
+                                <i class="fas fa-video-slash text-4xl mb-2"></i>
+                                <p class="language-text" data-lang="en">Video call will appear here</p>
+                                <p class="language-text hidden-lang" data-lang="hi">वीडियो कॉल यहाँ दिखेगी</p>
+                                <p class="language-text hidden-lang" data-lang="pa">ਵੀਡੀਓ ਕਾਲ ਇੱਥੇ ਦਿਖਾਈ ਜਾਵੇਗੀ</p>
+                            </div>
+                        </div>
+                        <div class="flex justify-center space-x-4">
+                            <button onclick="toggleVideo()" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded">
+                                <i class="fas fa-video mr-2"></i>
+                                <span class="language-text" data-lang="en">Start Video</span>
+                                <span class="language-text hidden-lang" data-lang="hi">वीडियो शुरू करें</span>
+                                <span class="language-text hidden-lang" data-lang="pa">ਵੀਡੀਓ ਸ਼ੁਰੂ ਕਰੋ</span>
+                            </button>
+                            <button onclick="toggleAudio()" class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded">
+                                <i class="fas fa-microphone mr-2"></i>
+                                <span class="language-text" data-lang="en">Mute</span>
+                                <span class="language-text hidden-lang" data-lang="hi">म्यूट</span>
+                                <span class="language-text hidden-lang" data-lang="pa">ਮਿਊਟ</span>
+                            </button>
+                            <button onclick="endCall()" class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded">
+                                <i class="fas fa-phone-slash mr-2"></i>
+                                <span class="language-text" data-lang="en">End Call</span>
+                                <span class="language-text hidden-lang" data-lang="hi">कॉल समाप्त करें</span>
+                                <span class="language-text hidden-lang" data-lang="pa">ਕਾਲ ਖਤਮ ਕਰੋ</span>
+                            </button>
+                        </div>
+                    </div>
+                    <div>
+                        <h3 class="font-bold mb-3">
+                            <span class="language-text" data-lang="en">Current Patient</span>
+                            <span class="language-text hidden-lang" data-lang="hi">वर्तमान रोगी</span>
+                            <span class="language-text hidden-lang" data-lang="pa">ਮੌਜੂਦਾ ਮਰੀਜ਼</span>
+                        </h3>
+                        <div class="bg-gray-50 p-4 rounded-lg">
+                            <p><strong>
+                                <span class="language-text" data-lang="en">Name:</span>
+                                <span class="language-text hidden-lang" data-lang="hi">नाम:</span>
+                                <span class="language-text hidden-lang" data-lang="pa">ਨਾਮ:</span>
+                            </strong> Preet Kaur</p>
+                            <p><strong>
+                                <span class="language-text" data-lang="en">Age:</span>
+                                <span class="language-text hidden-lang" data-lang="hi">आयु:</span>
+                                <span class="language-text hidden-lang" data-lang="pa">ਉਮਰ:</span>
+                            </strong> 34</p>
+                            <p><strong>
+                                <span class="language-text" data-lang="en">Village:</span>
+                                <span class="language-text hidden-lang" data-lang="hi">गाँव:</span>
+                                <span class="language-text hidden-lang" data-lang="pa">ਪਿੰਡ:</span>
+                            </strong> Ghanaur</p>
+                            <p><strong>
+                                <span class="language-text" data-lang="en">Symptoms:</span>
+                                <span class="language-text hidden-lang" data-lang="hi">लक्षण:</span>
+                                <span class="language-text hidden-lang" data-lang="pa">ਲੱਛਣ:</span>
+                            </strong> 
+                            <span class="language-text" data-lang="en">Fever, headache</span>
+                            <span class="language-text hidden-lang" data-lang="hi">बुखार, सिरदर्द</span>
+                            <span class="language-text hidden-lang" data-lang="pa">ਬੁਖਾਰ, ਸਿਰ ਦਰਦ</span>
+                            </p>
+                        </div>
+                        <div class="mt-4">
+                            <h4 class="font-semibold mb-2">
+                                <span class="language-text" data-lang="en">Network Quality</span>
+                                <span class="language-text hidden-lang" data-lang="hi">नेटवर्क गुणवत्ता</span>
+                                <span class="language-text hidden-lang" data-lang="pa">ਨੈਟਵਰਕ ਗੁਣਵੱਤਾ</span>
+                            </h4>
+                            <div class="flex items-center">
+                                <div class="w-full bg-gray-200 rounded-full h-2 mr-2">
+                                    <div class="bg-green-500 h-2 rounded-full" style="width: 75%"></div>
+                                </div>
+                                <span class="text-sm text-gray-600">1.2 Mbps</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- AI Symptom Checker -->
+        <section class="mb-8">
+            <h2 class="text-2xl font-bold mb-4 text-gray-800">
+                <span class="language-text" data-lang="en">AI Symptom Checker</span>
+                <span class="language-text hidden-lang" data-lang="hi">AI लक्षण जांचकर्ता</span>
+                <span class="language-text hidden-lang" data-lang="pa">AI ਲੱਛਣ ਜਾਂਚਕਰਤਾ</span>
+            </h2>
+            <div class="bg-white rounded-lg shadow-md p-6">
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <div>
+                        <h3 class="font-bold mb-3">
+                            <span class="language-text" data-lang="en">Describe Your Symptoms</span>
+                            <span class="language-text hidden-lang" data-lang="hi">अपने लक्षणों का वर्णन करें</span>
+                            <span class="language-text hidden-lang" data-lang="pa">ਆਪਣੇ ਲੱਛਣਾਂ ਦਾ ਵਰਣਨ ਕਰੋ</span>
+                        </h3>
+                        <textarea id="symptoms-input" class="w-full p-3 border rounded-lg mb-4 h-32" placeholder="Enter symptoms..."></textarea>
+                        <div class="mb-4">
+                            <h4 class="font-semibold mb-2">
+                                <span class="language-text" data-lang="en">Common Symptoms</span>
+                                <span class="language-text hidden-lang" data-lang="hi">सामान्य लक्षण</span>
+                                <span class="language-text hidden-lang" data-lang="pa">ਆਮ ਲੱਛਣ</span>
+                            </h4>
+                            <div class="flex flex-wrap gap-2">
+                                <button onclick="addSymptom('fever')" class="bg-gray-200 hover:bg-gray-300 px-3 py-1 rounded-full text-sm">
+                                    <span class="language-text" data-lang="en">Fever</span>
+                                    <span class="language-text hidden-lang" data-lang="hi">बुखार</span>
+                                    <span class="language-text hidden-lang" data-lang="pa">ਬੁਖਾਰ</span>
+                                </button>
+                                <button onclick="addSymptom('headache')" class="bg-gray-200 hover:bg-gray-300 px-3 py-1 rounded-full text-sm">
+                                    <span class="language-text" data-lang="en">Headache</span>
+                                    <span class="language-text hidden-lang" data-lang="hi">सिरदर्द</span>
+                                    <span class="language-text hidden-lang" data-lang="pa">ਸਿਰ ਦਰਦ</span>
+                                </button>
+                                <button onclick="addSymptom('cough')" class="bg-gray-200 hover:bg-gray-300 px-3 py-1 rounded-full text-sm">
+                                    <span class="language-text" data-lang="en">Cough</span>
+                                    <span class="language-text hidden-lang" data-lang="hi">खांसी</span>
+                                    <span class="language-text hidden-lang" data-lang="pa">ਖੰਘ</span>
+                                </button>
+                                <button onclick="addSymptom('stomach_pain')" class="bg-gray-200 hover:bg-gray-300 px-3 py-1 rounded-full text-sm">
+                                    <span class="language-text" data-lang="en">Stomach Pain</span>
+                                    <span class="language-text hidden-lang" data-lang="hi">पेट दर्द</span>
+                                    <span class="language-text hidden-lang" data-lang="pa">ਪੇਟ ਦਰਦ</span>
+                                </button>
+                            </div>
+                        </div>
+                        <button onclick="analyzeSymptoms()" class="bg-blue-500 hover:bg-blue-600 text-white px-6 py-2 rounded-lg">
+                            <i class="fas fa-search mr-2"></i>
+                            <span class="language-text" data-lang="en">Analyze Symptoms</span>
+                            <span class="language-text hidden-lang" data-lang="hi">लक्षणों का विश्लेषण करें</span>
+                            <span class="language-text hidden-lang" data-lang="pa">ਲੱਛਣਾਂ ਦਾ ਵਿਸ਼ਲੇਸ਼ਣ ਕਰੋ</span>
+                        </button>
+                    </div>
+                    <div>
+                        <h3 class="font-bold mb-3">
+                            <span class="language-text" data-lang="en">AI Analysis Results</span>
+                            <span class="language-text hidden-lang" data-lang="hi">AI विश्लेषण परिणाम</span>
+                            <span class="language-text hidden-lang" data-lang="pa">AI ਵਿਸ਼ਲੇਸ਼ਣ ਨਤੀਜੇ</span>
+                        </h3>
+                        <div id="ai-results" class="bg-gray-50 p-4 rounded-lg min-h-48">
+                            <div class="text-center text-gray-500">
+                                <i class="fas fa-robot text-3xl mb-2"></i>
+                                <p class="language-text" data-lang="en">Enter symptoms to get AI analysis</p>
+                                <p class="language-text hidden-lang" data-lang="hi">AI विश्लेषण प्राप्त करने के लिए लक्षण दर्ज करें</p>
+                                <p class="language-text hidden-lang" data-lang="pa">AI ਵਿਸ਼ਲੇਸ਼ਣ ਪ੍ਰਾਪਤ ਕਰਨ ਲਈ ਲੱਛਣ ਦਾਖਲ ਕਰੋ</p>
+                            </div>
+                        </div>
+                        <div class="mt-4 p-3 bg-yellow-50 border-l-4 border-yellow-400">
+                            <p class="text-sm text-yellow-700">
+                                <i class="fas fa-exclamation-triangle mr-1"></i>
+                                <span class="language-text" data-lang="en">This is for preliminary assessment only. Consult a doctor for proper diagnosis.</span>
+                                <span class="language-text hidden-lang" data-lang="hi">यह केवल प्रारंभिक मूल्यांकन के लिए है। उचित निदान के लिए डॉक्टर से सलाह लें।</span>
+                                <span class="language-text hidden-lang" data-lang="pa">ਇਹ ਕੇਵਲ ਸ਼ੁਰੂਆਤੀ ਮੁਲਾਂਕਣ ਲਈ ਹੈ। ਸਹੀ ਨਿਦਾਨ ਲਈ ਡਾਕਟਰ ਨਾਲ ਸਲਾਹ ਕਰੋ।</span>
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Health Records Management -->
+        <section class="mb-8">
+            <h2 class="text-2xl font-bold mb-4 text-gray-800">
+                <span class="language-text" data-lang="en">Digital Health Records</span>
+                <span class="language-text hidden-lang" data-lang="hi">डिजिटल स्वास्थ्य रिकॉर्ड</span>
+                <span class="language-text hidden-lang" data-lang="pa">ਡਿਜੀਟਲ ਸਿਹਤ ਰਿਕਾਰਡ</span>
+            </h2>
+            <div class="bg-white rounded-lg shadow-md p-6">
+                <div class="flex flex-wrap justify-between items-center mb-4">
+                    <div class="flex items-center mb-2 lg:mb-0">
+                        <input type="text" id="patient-search" placeholder="Search patients..." class="px-3 py-2 border rounded-lg mr-2">
+                        <button onclick="searchPatients()" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg">
+                            <i class="fas fa-search"></i>
+                        </button>
+                    </div>
+                    <div class="flex items-center space-x-2">
+                        <span id="sync-status" class="text-green-600">
+                            <i class="fas fa-sync-alt mr-1"></i>
+                            <span class="language-text" data-lang="en">Synced</span>
+                            <span class="language-text hidden-lang" data-lang="hi">सिंक हो गया</span>
+                            <span class="language-text hidden-lang" data-lang="pa">ਸਿੰਕ ਹੋ ਗਿਆ</span>
+                        </span>
+                        <button onclick="addNewRecord()" class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg">
+                            <i class="fas fa-plus mr-2"></i>
+                            <span class="language-text" data-lang="en">New Record</span>
+                            <span class="language-text hidden-lang" data-lang="hi">नया रिकॉर्ड</span>
+                            <span class="language-text hidden-lang" data-lang="pa">ਨਵਾਂ ਰਿਕਾਰਡ</span>
+                        </button>
+                    </div>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="min-w-full table-auto">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th class="px-4 py-2 text-left">
+                                    <span class="language-text" data-lang="en">Patient ID</span>
+                                    <span class="language-text hidden-lang" data-lang="hi">रोगी ID</span>
+                                    <span class="language-text hidden-lang" data-lang="pa">ਮਰੀਜ਼ ID</span>
+                                </th>
+                                <th class="px-4 py-2 text-left">
+                                    <span class="language-text" data-lang="en">Name</span>
+                                    <span class="language-text hidden-lang" data-lang="hi">नाम</span>
+                                    <span class="language-text hidden-lang" data-lang="pa">ਨਾਮ</span>
+                                </th>
+                                <th class="px-4 py-2 text-left">
+                                    <span class="language-text" data-lang="en">Village</span>
+                                    <span class="language-text hidden-lang" data-lang="hi">गाँव</span>
+                                    <span class="language-text hidden-lang" data-lang="pa">ਪਿੰਡ</span>
+                                </th>
+                                <th class="px-4 py-2 text-left">
+                                    <span class="language-text" data-lang="en">Last Visit</span>
+                                    <span class="language-text hidden-lang" data-lang="hi">अंतिम मुलाकात</span>
+                                    <span class="language-text hidden-lang" data-lang="pa">ਅਖੀਰੀ ਮੁਲਾਕਾਤ</span>
+                                </th>
+                                <th class="px-4 py-2 text-left">
+                                    <span class="language-text" data-lang="en">Status</span>
+                                    <span class="language-text hidden-lang" data-lang="hi">स्थिति</span>
+                                    <span class="language-text hidden-lang" data-lang="pa">ਸਥਿਤੀ</span>
+                                </th>
+                                <th class="px-4 py-2 text-left">
+                                    <span class="language-text" data-lang="en">Actions</span>
+                                    <span class="language-text hidden-lang" data-lang="hi">कार्रवाई</span>
+                                    <span class="language-text hidden-lang" data-lang="pa">ਕਾਰਵਾਈ</span>
+                                </th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr class="border-b">
+                                <td class="px-4 py-2">P001</td>
+                                <td class="px-4 py-2">Preet Kaur</td>
+                                <td class="px-4 py-2">Ghanaur</td>
+                                <td class="px-4 py-2">2024-01-15</td>
+                                <td class="px-4 py-2"><span class="bg-green-100 text-green-800 px-2 py-1 rounded-full text-xs">Active</span></td>
+                                <td class="px-4 py-2">
+                                    <button onclick="viewRecord('P001')" class="text-blue-500 hover:text-blue-700 mr-2">
+                                        <i class="fas fa-eye"></i>
+                                    </button>
+                                    <button onclick="editRecord('P001')" class="text-green-500 hover:text-green-700">
+                                        <i class="fas fa-edit"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                            <tr class="border-b">
+                                <td class="px-4 py-2">P002</td>
+                                <td class="px-4 py-2">Rajinder Singh</td>
+                                <td class="px-4 py-2">Bhadson</td>
+                                <td class="px-4 py-2">2024-01-14</td>
+                                <td class="px-4 py-2"><span class="bg-yellow-100 text-yellow-800 px-2 py-1 rounded-full text-xs">Follow-up</span></td>
+                                <td class="px-4 py-2">
+                                    <button onclick="viewRecord('P002')" class="text-blue-500 hover:text-blue-700 mr-2">
+                                        <i class="fas fa-eye"></i>
+                                    </button>
+                                    <button onclick="editRecord('P002')" class="text-green-500 hover:text-green-700">
+                                        <i class="fas fa-edit"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                            <tr class="border-b">
+                                <td class="px-4 py-2">P003</td>
+                                <td class="px-4 py-2">Manpreet Kaur</td>
+                                <td class="px-4 py-2">Lalton</td>
+                                <td class="px-4 py-2">2024-01-13</td>
+                                <td class="px-4 py-2"><span class="bg-red-100 text-red-800 px-2 py-1 rounded-full text-xs">Critical</span></td>
+                                <td class="px-4 py-2">
+                                    <button onclick="viewRecord('P003')" class="text-blue-500 hover:text-blue-700 mr-2">
+                                        <i class="fas fa-eye"></i>
+                                    </button>
+                                    <button onclick="editRecord('P003')" class="text-green-500 hover:text-green-700">
+                                        <i class="fas fa-edit"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- Pharmacy Inventory System -->
+        <section class="mb-8">
+            <h2 class="text-2xl font-bold mb-4 text-gray-800">
+                <span class="language-text" data-lang="en">Pharmacy Inventory</span>
+                <span class="language-text hidden-lang" data-lang="hi">फार्मेसी इन्वेंटरी</span>
+                <span class="language-text hidden-lang" data-lang="pa">ਫਾਰਮੇਸੀ ਸਮਾਨ</span>
+            </h2>
+            <div class="bg-white rounded-lg shadow-md p-6">
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <div class="lg:col-span-2">
+                        <div class="flex flex-wrap justify-between items-center mb-4">
+                            <input type="text" id="medicine-search" placeholder="Search medicines..." class="px-3 py-2 border rounded-lg">
+                            <button onclick="searchMedicines()" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg">
+                                <i class="fas fa-search mr-2"></i>
+                                <span class="language-text" data-lang="en">Search</span>
+                                <span class="language-text hidden-lang" data-lang="hi">खोजें</span>
+                                <span class="language-text hidden-lang" data-lang="pa">ਖੋਜੋ</span>
+                            </button>
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="min-w-full table-auto">
+                                <thead class="bg-gray-50">
+                                    <tr>
+                                        <th class="px-4 py-2 text-left">
+                                            <span class="language-text" data-lang="en">Medicine</span>
+                                            <span class="language-text hidden-lang" data-lang="hi">दवा</span>
+                                            <span class="language-text hidden-lang" data-lang="pa">ਦਵਾਈ</span>
+                                        </th>
+                                        <th class="px-4 py-2 text-left">
+                                            <span class="language-text" data-lang="en">Stock</span>
+                                            <span class="language-text hidden-lang" data-lang="hi">स्टॉक</span>
+                                            <span class="language-text hidden-lang" data-lang="pa">ਸਟਾਕ</span>
+                                        </th>
+                                        <th class="px-4 py-2 text-left">
+                                            <span class="language-text" data-lang="en">Price</span>
+                                            <span class="language-text hidden-lang" data-lang="hi">मूल्य</span>
+                                            <span class="language-text hidden-lang" data-lang="pa">ਕੀਮਤ</span>
+                                        </th>
+                                        <th class="px-4 py-2 text-left">
+                                            <span class="language-text" data-lang="en">Status</span>
+                                            <span class="language-text hidden-lang" data-lang="hi">स्थिति</span>
+                                            <span class="language-text hidden-lang" data-lang="pa">ਸਥਿਤੀ</span>
+                                        </th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr class="border-b">
+                                        <td class="px-4 py-2">Paracetamol 500mg</td>
+                                        <td class="px-4 py-2">150</td>
+                                        <td class="px-4 py-2">₹2.50</td>
+                                        <td class="px-4 py-2"><span class="bg-green-100 text-green-800 px-2 py-1 rounded-full text-xs">In Stock</span></td>
+                                    </tr>
+                                    <tr class="border-b">
+                                        <td class="px-4 py-2">Amoxicillin 250mg</td>
+                                        <td class="px-4 py-2">25</td>
+                                        <td class="px-4 py-2">₹8.00</td>
+                                        <td class="px-4 py-2"><span class="bg-yellow-100 text-yellow-800 px-2 py-1 rounded-full text-xs">Low Stock</span></td>
+                                    </tr>
+                                    <tr class="border-b">
+                                        <td class="px-4 py-2">Crocin Advance</td>
+                                        <td class="px-4 py-2">0</td>
+                                        <td class="px-4 py-2">₹15.00</td>
+                                        <td class="px-4 py-2"><span class="bg-red-100 text-red-800 px-2 py-1 rounded-full text-xs">Out of Stock</span></td>
+                                    </tr>
+                                    <tr class="border-b">
+                                        <td class="px-4 py-2">Cetirizine 10mg</td>
+                                        <td class="px-4 py-2">80</td>
+                                        <td class="px-4 py-2">₹3.20</td>
+                                        <td class="px-4 py-2"><span class="bg-green-100 text-green-800 px-2 py-1 rounded-full text-xs">In Stock</span></td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <div>
+                        <h3 class="font-bold mb-3">
+                            <span class="language-text" data-lang="en">Stock Alerts</span>
+                            <span class="language-text hidden-lang" data-lang="hi">स्टॉक अलर्ट</span>
+                            <span class="language-text hidden-lang" data-lang="pa">ਸਟਾਕ ਚੇਤਾਵਨੀ</span>
+                        </h3>
+                        <div class="space-y-3">
+                            <div class="bg-red-50 border-l-4 border-red-400 p-3">
+                                <p class="text-sm text-red-700">
+                                    <i class="fas fa-exclamation-triangle mr-1"></i>
+                                    Crocin Advance - Out of Stock
+                                </p>
+                            </div>
+                            <div class="bg-yellow-50 border-l-4 border-yellow-400 p-3">
+                                <p class="text-sm text-yellow-700">
+                                    <i class="fas fa-exclamation mr-1"></i>
+                                    Amoxicillin - Low Stock (25 units)
+                                </p>
+                            </div>
+                        </div>
+                        <div class="mt-6">
+                            <h3 class="font-bold mb-3">
+                                <span class="language-text" data-lang="en">Quick Actions</span>
+                                <span class="language-text hidden-lang" data-lang="hi">त्वरित कार्रवाई</span>
+                                <span class="language-text hidden-lang" data-lang="pa">ਤੁਰੰਤ ਕਾਰਵਾਈ</span>
+                            </h3>
+                            <div class="space-y-2">
+                                <button onclick="addMedicine()" class="w-full bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg text-sm">
+                                    <i class="fas fa-plus mr-2"></i>
+                                    <span class="language-text" data-lang="en">Add Medicine</span>
+                                    <span class="language-text hidden-lang" data-lang="hi">दवा जोड़ें</span>
+                                    <span class="language-text hidden-lang" data-lang="pa">ਦਵਾਈ ਜੋੜੋ</span>
+                                </button>
+                                <button onclick="reorderStock()" class="w-full bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg text-sm">
+                                    <i class="fas fa-shopping-cart mr-2"></i>
+                                    <span class="language-text" data-lang="en">Reorder Stock</span>
+                                    <span class="language-text hidden-lang" data-lang="hi">स्टॉक पुनः ऑर्डर करें</span>
+                                    <span class="language-text hidden-lang" data-lang="pa">ਸਟਾਕ ਦੁਬਾਰਾ ਆਰਡਰ ਕਰੋ</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Appointment Scheduling -->
+        <section class="mb-8">
+            <h2 class="text-2xl font-bold mb-4 text-gray-800">
+                <span class="language-text" data-lang="en">Appointment Scheduling</span>
+                <span class="language-text hidden-lang" data-lang="hi">नियुक्ति निर्धारण</span>
+                <span class="language-text hidden-lang" data-lang="pa">ਮੁਲਾਕਾਤ ਤਹਿ ਕਰਨਾ</span>
+            </h2>
+            <div class="bg-white rounded-lg shadow-md p-6">
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <div>
+                        <h3 class="font-bold mb-3">
+                            <span class="language-text" data-lang="en">Today's Schedule</span>
+                            <span class="language-text hidden-lang" data-lang="hi">आज का कार्यक्रम</span>
+                            <span class="language-text hidden-lang" data-lang="pa">ਅੱਜ ਦਾ ਕਾਰਯਕ੍ਰਮ</span>
+                        </h3>
+                        <div class="space-y-3">
+                            <div class="border-l-4 border-blue-400 bg-blue-50 p-3">
+                                <div class="flex justify-between items-start">
+                                    <div>
+                                        <p class="font-semibold">09:00 AM - Preet Kaur</p>
+                                        <p class="text-sm text-gray-600">
+                                            <span class="language-text" data-lang="en">General Consultation</span>
+                                            <span class="language-text hidden-lang" data-lang="hi">सामान्य परामर्श</span>
+                                            <span class="language-text hidden-lang" data-lang="pa">ਆਮ ਸਲਾਹ</span>
+                                        </p>
+                                        <p class="text-xs text-gray-500">Village: Ghanaur</p>
+                                    </div>
+                                    <span class="bg-green-100 text-green-800 px-2 py-1 rounded-full text-xs">Confirmed</span>
+                                </div>
+                            </div>
+                            <div class="border-l-4 border-green-400 bg-green-50 p-3">
+                                <div class="flex justify-between items-start">
+                                    <div>
+                                        <p class="font-semibold">10:30 AM - Rajinder Singh</p>
+                                        <p class="text-sm text-gray-600">
+                                            <span class="language-text" data-lang="en">Follow-up</span>
+                                            <span class="language-text hidden-lang" data-lang="hi">फॉलो-अप</span>
+                                            <span class="language-text hidden-lang" data-lang="pa">ਫਾਲੋ-ਅਪ</span>
+                                        </p>
+                                        <p class="text-xs text-gray-500">Village: Bhadson</p>
+                                    </div>
+                                    <span class="bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-xs">In Progress</span>
+                                </div>
+                            </div>
+                            <div class="border-l-4 border-yellow-400 bg-yellow-50 p-3">
+                                <div class="flex justify-between items-start">
+                                    <div>
+                                        <p class="font-semibold">02:00 PM - Manpreet Kaur</p>
+                                        <p class="text-sm text-gray-600">
+                                            <span class="language-text" data-lang="en">Emergency Consultation</span>
+                                            <span class="language-text hidden-lang" data-lang="hi">आपातकालीन परामर्श</span>
+                                            <span class="language-text hidden-lang" data-lang="pa">ਐਮਰਜੈਂਸੀ ਸਲਾਹ</span>
+                                        </p>
+                                        <p class="text-xs text-gray-500">Village: Lalton</p>
+                                    </div>
+                                    <span class="bg-yellow-100 text-yellow-800 px-2 py-1 rounded-full text-xs">Pending</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div>
+                        <h3 class="font-bold mb-3">
+                            <span class="language-text" data-lang="en">Book New Appointment</span>
+                            <span class="language-text hidden-lang" data-lang="hi">नई नियुक्ति बुक करें</span>
+                            <span class="language-text hidden-lang" data-lang="pa">ਨਵੀਂ ਮੁਲਾਕਾਤ ਬੁੱਕ ਕਰੋ</span>
+                        </h3>
+                        <form class="space-y-4">
+                            <div>
+                                <label class="block text-sm font-medium mb-1">
+                                    <span class="language-text" data-lang="en">Patient Name</span>
+                                    <span class="language-text hidden-lang" data-lang="hi">रोगी का नाम</span>
+                                    <span class="language-text hidden-lang" data-lang="pa">ਮਰੀਜ਼ ਦਾ ਨਾਮ</span>
+                                </label>
+                                <input type="text" class="w-full px-3 py-2 border rounded-lg" placeholder="Enter patient name">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium mb-1">
+                                    <span class="language-text" data-lang="en">Date</span>
+                                    <span class="language-text hidden-lang" data-lang="hi">तारीख</span>
+                                    <span class="language-text hidden-lang" data-lang="pa">ਤਾਰੀਖ</span>
+                                </label>
+                                <input type="date" class="w-full px-3 py-2 border rounded-lg">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium mb-1">
+                                    <span class="language-text" data-lang="en">Time</span>
+                                    <span class="language-text hidden-lang" data-lang="hi">समय</span>
+                                    <span class="language-text hidden-lang" data-lang="pa">ਸਮਾਂ</span>
+                                </label>
+                                <select class="w-full px-3 py-2 border rounded-lg">
+                                    <option>09:00 AM</option>
+                                    <option>10:00 AM</option>
+                                    <option>11:00 AM</option>
+                                    <option>02:00 PM</option>
+                                    <option>03:00 PM</option>
+                                    <option>04:00 PM</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium mb-1">
+                                    <span class="language-text" data-lang="en">Consultation Type</span>
+                                    <span class="language-text hidden-lang" data-lang="hi">परामर्श प्रकार</span>
+                                    <span class="language-text hidden-lang" data-lang="pa">ਸਲਾਹ ਦੀ ਕਿਸਮ</span>
+                                </label>
+                                <select class="w-full px-3 py-2 border rounded-lg">
+                                    <option>General Consultation</option>
+                                    <option>Follow-up</option>
+                                    <option>Emergency</option>
+                                    <option>Specialist Referral</option>
+                                </select>
+                            </div>
+                            <button type="button" onclick="bookAppointment()" class="w-full bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg">
+                                <i class="fas fa-calendar-plus mr-2"></i>
+                                <span class="language-text" data-lang="en">Book Appointment</span>
+                                <span class="language-text hidden-lang" data-lang="hi">नियुक्ति बुक करें</span>
+                                <span class="language-text hidden-lang" data-lang="pa">ਮੁਲਾਕਾਤ ਬੁੱਕ ਕਰੋ</span>
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Analytics Dashboard -->
+        <section class="mb-8">
+            <h2 class="text-2xl font-bold mb-4 text-gray-800">
+                <span class="language-text" data-lang="en">Analytics Dashboard</span>
+                <span class="language-text hidden-lang" data-lang="hi">विश्लेषणात्मक डैशबोर्ड</span>
+                <span class="language-text hidden-lang" data-lang="pa">ਵਿਸ਼ਲੇਸ਼ਣ ਡੈਸ਼ਬੋਰਡ</span>
+            </h2>
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div class="bg-white rounded-lg shadow-md p-6">
+                    <h3 class="font-bold mb-3">
+                        <span class="language-text" data-lang="en">Daily Consultations</span>
+                        <span class="language-text hidden-lang" data-lang="hi">दैनिक परामर्श</span>
+                        <span class="language-text hidden-lang" data-lang="pa">ਰੋਜ਼ਾਨਾ ਸਲਾਹ</span>
+                    </h3>
+                    <div class="chart-container">
+                        <canvas id="consultationsChart"></canvas>
+                    </div>
+                </div>
+                <div class="bg-white rounded-lg shadow-md p-6">
+                    <h3 class="font-bold mb-3">
+                        <span class="language-text" data-lang="en">Village-wise Patient Distribution</span>
+                        <span class="language-text hidden-lang" data-lang="hi">गाँव-वार रोगी वितरण</span>
+                        <span class="language-text hidden-lang" data-lang="pa">ਪਿੰਡ-ਵਾਰ ਮਰੀਜ਼ ਵੰਡ</span>
+                    </h3>
+                    <div class="chart-container">
+                        <canvas id="villageChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Admin Panel -->
+        <section class="mb-8">
+            <h2 class="text-2xl font-bold mb-4 text-gray-800">
+                <span class="language-text" data-lang="en">Admin Panel</span>
+                <span class="language-text hidden-lang" data-lang="hi">एडमिन पैनल</span>
+                <span class="language-text hidden-lang" data-lang="pa">ਐਡਮਿਨ ਪੈਨਲ</span>
+            </h2>
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <div class="bg-white rounded-lg shadow-md p-6">
+                    <h3 class="font-bold mb-3">
+                        <span class="language-text" data-lang="en">System Status</span>
+                        <span class="language-text hidden-lang" data-lang="hi">सिस्टम स्थिति</span>
+                        <span class="language-text hidden-lang" data-lang="pa">ਸਿਸਟਮ ਦੀ ਸਥਿਤੀ</span>
+                    </h3>
+                    <div class="space-y-3">
+                        <div class="flex justify-between items-center">
+                            <span class="text-sm">
+                                <span class="language-text" data-lang="en">Server Status</span>
+                                <span class="language-text hidden-lang" data-lang="hi">सर्वर स्थिति</span>
+                                <span class="language-text hidden-lang" data-lang="pa">ਸਰਵਰ ਸਥਿਤੀ</span>
+                            </span>
+                            <span class="bg-green-100 text-green-800 px-2 py-1 rounded-full text-xs">Online</span>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span class="text-sm">
+                                <span class="language-text" data-lang="en">Database</span>
+                                <span class="language-text hidden-lang" data-lang="hi">डेटाबेस</span>
+                                <span class="language-text hidden-lang" data-lang="pa">ਡਾਟਾਬੇਸ</span>
+                            </span>
+                            <span class="bg-green-100 text-green-800 px-2 py-1 rounded-full text-xs">Connected</span>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span class="text-sm">
+                                <span class="language-text" data-lang="en">AI Service</span>
+                                <span class="language-text hidden-lang" data-lang="hi">AI सेवा</span>
+                                <span class="language-text hidden-lang" data-lang="pa">AI ਸੇਵਾ</span>
+                            </span>
+                            <span class="bg-green-100 text-green-800 px-2 py-1 rounded-full text-xs">Active</span>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span class="text-sm">
+                                <span class="language-text" data-lang="en">Video Service</span>
+                                <span class="language-text hidden-lang" data-lang="hi">वीडियो सेवा</span>
+                                <span class="language-text hidden-lang" data-lang="pa">ਵੀਡੀਓ ਸੇਵਾ</span>
+                            </span>
+                            <span class="bg-green-100 text-green-800 px-2 py-1 rounded-full text-xs">Running</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="bg-white rounded-lg shadow-md p-6">
+                    <h3 class="font-bold mb-3">
+                        <span class="language-text" data-lang="en">User Management</span>
+                        <span class="language-text hidden-lang" data-lang="hi">उपयोगकर्ता प्रबंधन</span>
+                        <span class="language-text hidden-lang" data-lang="pa">ਉਪਭੋਗਤਾ ਪ੍ਰਬੰਧਨ</span>
+                    </h3>
+                    <div class="space-y-2">
+                        <button onclick="manageUsers('doctors')" class="w-full bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg text-sm">
+                            <i class="fas fa-user-md mr-2"></i>
+                            <span class="language-text" data-lang="en">Manage Doctors</span>
+                            <span class="language-text hidden-lang" data-lang="hi">डॉक्टरों का प्रबंधन</span>
+                            <span class="language-text hidden-lang" data-lang="pa">ਡਾਕਟਰਾਂ ਦਾ ਪ੍ਰਬੰਧਨ</span>
+                        </button>
+                        <button onclick="manageUsers('patients')" class="w-full bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg text-sm">
+                            <i class="fas fa-users mr-2"></i>
+                            <span class="language-text" data-lang="en">Manage Patients</span>
+                            <span class="language-text hidden-lang" data-lang="hi">रोगियों का प्रबंधन</span>
+                            <span class="language-text hidden-lang" data-lang="pa">ਮਰੀਜ਼ਾਂ ਦਾ ਪ੍ਰਬੰਧਨ</span>
+                        </button>
+                        <button onclick="manageUsers('pharmacists')" class="w-full bg-purple-500 hover:bg-purple-600 text-white px-4 py-2 rounded-lg text-sm">
+                            <i class="fas fa-prescription-bottle-alt mr-2"></i>
+                            <span class="language-text" data-lang="en">Manage Pharmacists</span>
+                            <span class="language-text hidden-lang" data-lang="hi">फार्मासिस्टों का प्रबंधन</span>
+                            <span class="language-text hidden-lang" data-lang="pa">ਫਾਰਮਾਸਿਸਟਾਂ ਦਾ ਪ੍ਰਬੰਧਨ</span>
+                        </button>
+                    </div>
+                </div>
+                <div class="bg-white rounded-lg shadow-md p-6">
+                    <h3 class="font-bold mb-3">
+                        <span class="language-text" data-lang="en">System Settings</span>
+                        <span class="language-text hidden-lang" data-lang="hi">सिस्टम सेटिंग्स</span>
+                        <span class="language-text hidden-lang" data-lang="pa">ਸਿਸਟਮ ਸੈਟਿੰਗਾਂ</span>
+                    </h3>
+                    <div class="space-y-2">
+                        <button onclick="systemSettings('backup')" class="w-full bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-lg text-sm">
+                            <i class="fas fa-database mr-2"></i>
+                            <span class="language-text" data-lang="en">Database Backup</span>
+                            <span class="language-text hidden-lang" data-lang="hi">डेटाबेस बैकअप</span>
+                            <span class="language-text hidden-lang" data-lang="pa">ਡਾਟਾਬੇਸ ਬੈਕਅਪ</span>
+                        </button>
+                        <button onclick="systemSettings('logs')" class="w-full bg-indigo-500 hover:bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm">
+                            <i class="fas fa-file-alt mr-2"></i>
+                            <span class="language-text" data-lang="en">View Logs</span>
+                            <span class="language-text hidden-lang" data-lang="hi">लॉग देखें</span>
+                            <span class="language-text hidden-lang" data-lang="pa">ਲਾਗ ਦੇਖੋ</span>
+                        </button>
+                        <button onclick="systemSettings('config')" class="w-full bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-lg text-sm">
+                            <i class="fas fa-cog mr-2"></i>
+                            <span class="language-text" data-lang="en">Configuration</span>
+                            <span class="language-text hidden-lang" data-lang="hi">कॉन्फ़िगरेशन</span>
+                            <span class="language-text hidden-lang" data-lang="pa">ਸੰਰਚਨਾ</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-gray-800 text-white py-6">
+        <div class="container mx-auto px-4">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div>
+                    <h3 class="font-bold mb-2">
+                        <span class="language-text" data-lang="en">Nabha Rural Telemedicine</span>
+                        <span class="language-text hidden-lang" data-lang="hi">नाभा ग्रामीण टेलीमेडिसिन</span>
+                        <span class="language-text hidden-lang" data-lang="pa">ਨਾਭਾ ਪੇਂਡੂ ਟੈਲੀਮੈਡੀਸਿਨ</span>
+                    </h3>
+                    <p class="text-sm text-gray-300">
+                        <span class="language-text" data-lang="en">Providing quality healthcare access to rural communities across Punjab</span>
+                        <span class="language-text hidden-lang" data-lang="hi">पंजाब भर के ग्रामीण समुदायों को गुणवत्तापूर्ण स्वास्थ्य सेवा प्रदान करना</span>
+                        <span class="language-text hidden-lang" data-lang="pa">ਪੰਜਾਬ ਭਰ ਦੇ ਪੇਂਡੂ ਭਾਈਚਾਰਿਆਂ ਨੂੰ ਗੁਣਵੱਤਾ ਸਿਹਤ ਸੇਵਾ ਪ੍ਰਦਾਨ ਕਰਨਾ</span>
+                    </p>
+                </div>
+                <div>
+                    <h3 class="font-bold mb-2">
+                        <span class="language-text" data-lang="en">Emergency Contact</span>
+                        <span class="language-text hidden-lang" data-lang="hi">आपातकालीन संपर्क</span>
+                        <span class="language-text hidden-lang" data-lang="pa">ਐਮਰਜੈਂਸੀ ਸੰਪਰਕ</span>
+                    </h3>
+                    <p class="text-sm text-gray-300">
+                        <i class="fas fa-phone mr-2"></i>108 (Emergency)
+                    </p>
+                    <p class="text-sm text-gray-300">
+                        <i class="fas fa-phone mr-2"></i>+91-98765-43210 (Telemedicine)
+                    </p>
+                </div>
+                <div>
+                    <h3 class="font-bold mb-2">
+                        <span class="language-text" data-lang="en">Technical Support</span>
+                        <span class="language-text hidden-lang" data-lang="hi">तकनीकी सहायता</span>
+                        <span class="language-text hidden-lang" data-lang="pa">ਤਕਨੀਕੀ ਸਹਾਇਤਾ</span>
+                    </h3>
+                    <p class="text-sm text-gray-300">
+                        <i class="fas fa-envelope mr-2"></i>support@nabhatelemedicine.in
+                    </p>
+                    <p class="text-sm text-gray-300">
+                        <i class="fas fa-clock mr-2"></i>24/7 Available
+                    </p>
+                </div>
+            </div>
+            <div class="border-t border-gray-700 mt-6 pt-4 text-center">
+                <p class="text-sm text-gray-400">
+                    © 2024 Nabha Rural Telemedicine Platform. All rights reserved. | 
+                    <span class="language-text" data-lang="en">Built for rural healthcare innovation</span>
+                    <span class="language-text hidden-lang" data-lang="hi">ग्रामीण स्वास्थ्य नवाचार के लिए निर्मित</span>
+                    <span class="language-text hidden-lang" data-lang="pa">ਪੇਂਡੂ ਸਿਹਤ ਨਵੀਨਤਾ ਲਈ ਬਣਾਇਆ ਗਿਆ</span>
+                </p>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        // Language translations
+        const translations = {
+            en: {},
+            hi: {},
+            pa: {}
+        };
+
+        // Global state
+        let currentLanguage = 'en';
+        let currentRole = 'patient';
+        let isOnline = navigator.onLine;
+        let deferredPrompt;
+
+        // Initialize application
+        document.addEventListener('DOMContentLoaded', function() {
+            initializePWA();
+            initializeCharts();
+            checkNetworkStatus();
+            loadUserData();
+            
+            // Set up event listeners
+            window.addEventListener('online', () => updateNetworkStatus(true));
+            window.addEventListener('offline', () => updateNetworkStatus(false));
+            window.addEventListener('beforeinstallprompt', (e) => {
+                e.preventDefault();
+                deferredPrompt = e;
+                showPWABanner();
+            });
+        });
+
+        // PWA functionality
+        function initializePWA() {
+            if ('serviceWorker' in navigator) {
+                navigator.serviceWorker.register('/sw.js')
+                    .then(registration => {
+                        console.log('SW registered: ', registration);
+                    })
+                    .catch(registrationError => {
+                        console.log('SW registration failed: ', registrationError);
+                    });
+            }
+        }
+
+        function showPWABanner() {
+            document.getElementById('pwa-banner').style.display = 'block';
+        }
+
+        function installPWA() {
+            if (deferredPrompt) {
+                deferredPrompt.prompt();
+                deferredPrompt.userChoice.then((result) => {
+                    if (result.outcome === 'accepted') {
+                        console.log('User accepted the install prompt');
+                    } else {
+                        console.log('User dismissed the install prompt');
+                    }
+                    deferredPrompt = null;
+                });
+            }
+            closePWABanner();
+        }
+
+        function closePWABanner() {
+            document.getElementById('pwa-banner').style.display = 'none';
+        }
+
+        // Network status
+        function checkNetworkStatus() {
+            updateNetworkStatus(navigator.onLine);
+        }
+
+        function updateNetworkStatus(online) {
+            isOnline = online;
+            const indicator = document.getElementById('offline-indicator');
+            const syncStatus = document.getElementById('sync-status');
+            
+            if (online) {
+                indicator.classList.add('hidden');
+                syncStatus.innerHTML = '<i class="fas fa-sync-alt mr-1"></i><span class="language-text" data-lang="en">Synced</span>';
+                syncStatus.className = 'text-green-600';
+                syncData();
+            } else {
+                indicator.classList.remove('hidden');
+                syncStatus.innerHTML = '<i class="fas fa-sync-alt mr-1"></i><span class="language-text" data-lang="en">Offline</span>';
+                syncStatus.className = 'text-red-600';
+            }
+        }
+
+        // Data synchronization
+        function syncData() {
+            if (isOnline) {
+                // Sync offline data to server
+                const offlineData = JSON.parse(localStorage.getItem('offlineData') || '[]');
+                if (offlineData.length > 0) {
+                    // In a real application, this would send data to the server
+                    console.log('Syncing offline data:', offlineData);
+                    localStorage.removeItem('offlineData');
+                    showNotification('Data synchronized successfully');
+                }
+            }
+        }
+
+        // Language management
+        function changeLanguage() {
+            const selector = document.getElementById('language-selector');
+            currentLanguage = selector.value;
+            
+            // Hide all language texts
+            document.querySelectorAll('.language-text').forEach(el => {
+                el.classList.add('hidden-lang');
+            });
+            
+            // Show current language texts
+            document.querySelectorAll(`[data-lang="${currentLanguage}"]`).forEach(el => {
+                el.classList.remove('hidden-lang');
+            });
+            
+            // Save language preference
+            localStorage.setItem('selectedLanguage', currentLanguage);
+        }
+
+        // Role management
+        function changeRole() {
+            const selector = document.getElementById('role-selector');
+            currentRole = selector.value;
+            
+            // Update user interface based on role
+            updateUIForRole(currentRole);
+            
+            // Save role preference
+            localStorage.setItem('selectedRole', currentRole);
+        }
+
+        function updateUIForRole(role) {
+            const userName = document.getElementById('user-name');
+            
+            switch(role) {
+                case 'doctor':
+                    userName.textContent = 'Dr. Rajesh Kumar';
+                    break;
+                case 'patient':
+                    userName.textContent = 'Preet Kaur';
+                    break;
+                case 'pharmacist':
+                    userName.textContent = 'Pharmacist Singh';
+                    break;
+                case 'admin':
+                    userName.textContent = 'Admin User';
+                    break;
+            }
+        }
+
+        // Load user data
+        function loadUserData() {
+            const savedLanguage = localStorage.getItem('selectedLanguage');
+            const savedRole = localStorage.getItem('selectedRole');
+            
+            if (savedLanguage) {
+                document.getElementById('language-selector').value = savedLanguage;
+                currentLanguage = savedLanguage;
+                changeLanguage();
+            }
+            
+            if (savedRole) {
+                document.getElementById('role-selector').value = savedRole;
+                currentRole = savedRole;
+                changeRole();
+            }
+        }
+
+        // Video consultation functions
+        function toggleVideo() {
+            showNotification('Video call functionality would be implemented with WebRTC');
+            // In a real application, this would handle WebRTC video calls
+        }
+
+        function toggleAudio() {
+            showNotification('Audio mute/unmute functionality');
+        }
+
+        function endCall() {
+            showNotification('Call ended');
+        }
+
+        // AI Symptom Checker
+        function addSymptom(symptom) {
+            const input = document.getElementById('symptoms-input');
+            const currentText = input.value;
+            const symptomText = {
+                fever: { en: 'fever', hi: 'बुखार', pa: 'ਬੁਖਾਰ' },
+                headache: { en: 'headache', hi: 'सिरदर्द', pa: 'ਸਿਰ ਦਰਦ' },
+                cough: { en: 'cough', hi: 'खांसी', pa: 'ਖੰਘ' },
+                stomach_pain: { en: 'stomach pain', hi: 'पेट दर्द', pa: 'ਪੇਟ ਦਰਦ' }
+            };
+            
+            const text = symptomText[symptom][currentLanguage];
+            input.value = currentText ? `${currentText}, ${text}` : text;
+        }
+
+        function analyzeSymptoms() {
+            const symptoms = document.getElementById('symptoms-input').value;
+            const resultsDiv = document.getElementById('ai-results');
+            
+            if (!symptoms.trim()) {
+                showNotification('Please enter symptoms first');
+                return;
+            }
+            
+            // Mock AI analysis
+            resultsDiv.innerHTML = `
+                <div class="space-y-3">
+                    <div class="border-l-4 border-blue-400 bg-blue-50 p-3">
+                        <h4 class="font-semibold text-blue-800">Possible Conditions:</h4>
+                        <ul class="text-sm text-blue-700 mt-1">
+                            <li>• Common Cold (75% match)</li>
+                            <li>• Viral Fever (60% match)</li>
+                            <li>• Seasonal Flu (45% match)</li>
+                        </ul>
+                    </div>
+                    <div class="border-l-4 border-green-400 bg-green-50 p-3">
+                        <h4 class="font-semibold text-green-800">Recommendations:</h4>
+                        <ul class="text-sm text-green-700 mt-1">
+                            <li>• Rest and stay hydrated</li>
+                            <li>• Take paracetamol for fever</li>
+                            <li>• Consult doctor if symptoms persist</li>
+                        </ul>
+                    </div>
+                    <div class="border-l-4 border-yellow-400 bg-yellow-50 p-3">
+                        <h4 class="font-semibold text-yellow-800">Next Steps:</h4>
+                        <p class="text-sm text-yellow-700 mt-1">Schedule a video consultation for proper diagnosis</p>
+                        <button onclick="bookAppointment()" class="mt-2 bg-blue-500 text-white px-3 py-1 rounded text-sm">Book Consultation</button>
+                    </div>
+                </div>
+            `;
+            
+            showNotification('AI analysis completed');
+        }
+
+        // Health records functions
+        function searchPatients() {
+            const searchTerm = document.getElementById('patient-search').value;
+            showNotification(`Searching for: ${searchTerm}`);
+            // In a real application, this would filter the patient table
+        }
+
+        function viewRecord(patientId) {
+            showNotification(`Viewing record for patient: ${patientId}`);
+        }
+
+        function editRecord(patientId) {
+            showNotification(`Editing record for patient: ${patientId}`);
+        }
+
+        function addNewRecord() {
+            showNotification('Opening new record form');
+        }
+
+        // Pharmacy functions
+        function searchMedicines() {
+            const searchTerm = document.getElementById('medicine-search').value;
+            showNotification(`Searching medicines: ${searchTerm}`);
+        }
+
+        function addMedicine() {
+            showNotification('Opening add medicine form');
+        }
+
+        function reorderStock() {
+            showNotification('Initiating stock reorder process');
+        }
+
+        // Appointment functions
+        function bookAppointment() {
+            showNotification('Appointment booked successfully');
+            
+            // In offline mode, save to local storage
+            if (!isOnline) {
+                const offlineData = JSON.parse(localStorage.getItem('offlineData') || '[]');
+                offlineData.push({
+                    type: 'appointment',
+                    timestamp: new Date().toISOString(),
+                    data: { /* appointment data */ }
+                });
+                localStorage.setItem('offlineData', JSON.stringify(offlineData));
+            }
+        }
+
+        // Admin functions
+        function manageUsers(userType) {
+            showNotification(`Managing ${userType}`);
+        }
+
+        function systemSettings(setting) {
+            showNotification(`Accessing ${setting} settings`);
+        }
+
+        // Notification system
+        function showNotification(message) {
+            const toast = document.getElementById('notification-toast');
+            const text = document.getElementById('notification-text');
+            
+            text.textContent = message;
+            toast.classList.add('show');
+            
+            setTimeout(() => {
+                toast.classList.remove('show');
+            }, 3000);
+        }
+
+        // Chart initialization
+        function initializeCharts() {
+            // Daily consultations chart
+            const consultationsCtx = document.getElementById('consultationsChart').getContext('2d');
+            new Chart(consultationsCtx, {
+                type: 'line',
+                data: {
+                    labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+                    datasets: [{
+                        label: 'Daily Consultations',
+                        data: [12, 19, 15, 25, 22, 18, 24],
+                        borderColor: 'rgb(59, 130, 246)',
+                        backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                        tension: 0.4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true
+                        }
+                    }
+                }
+            });
+
+            // Village distribution chart
+            const villageCtx = document.getElementById('villageChart').getContext('2d');
+            new Chart(villageCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Ghanaur', 'Bhadson', 'Lalton', 'Samana', 'Others'],
+                    datasets: [{
+                        data: [25, 20, 15, 12, 28],
+                        backgroundColor: [
+                            '#3B82F6',
+                            '#10B981',
+                            '#F59E0B',
+                            '#EF4444',
+                            '#8B5CF6'
+                        ]
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom'
+                        }
+                    }
+                }
+            });
+        }
+    </script>
+
+    <!-- Service Worker Registration Script -->
+    <script>
+        // Service Worker for PWA functionality
+        const swCode = `
+            const CACHE_NAME = 'nabha-telemedicine-v1';
+            const urlsToCache = [
+                '/',
+                '/offline.html',
+                'https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css',
+                'https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css',
+                'https://cdn.jsdelivr.net/npm/chart.js'
+            ];
+
+            self.addEventListener('install', event => {
+                event.waitUntil(
+                    caches.open(CACHE_NAME)
+                        .then(cache => cache.addAll(urlsToCache))
+                );
+            });
+
+            self.addEventListener('fetch', event => {
+                event.respondWith(
+                    caches.match(event.request)
+                        .then(response => {
+                            if (response) {
+                                return response;
+                            }
+                            return fetch(event.request);
+                        }
+                    )
+                );
+            });
+        `;
+
+        // Create and register service worker
+        if ('serviceWorker' in navigator) {
+            const blob = new Blob([swCode], { type: 'application/javascript' });
+            const swUrl = URL.createObjectURL(blob);
+            
+            navigator.serviceWorker.register(swUrl)
+                .then(registration => {
+                    console.log('Service Worker registered successfully');
+                })
+                .catch(error => {
+                    console.log('Service Worker registration failed');
+                });
+        }
+    </script>
+</body>
+</html>
